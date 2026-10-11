@@ -4,55 +4,58 @@ All notable updates, milestones, and working states are logged here in reverse c
 
 ---
 
-### [2026-10-11] - Milestone 2: Real Running Simulated Corporate Sandbox
+### [2026-10-11] - Milestone 3: Hardened Reliability, Failure Recovery, Independent Verification & Safety
 - **What's Done**:
-  - Built **Vendor Portal (Port 8001)**:
-    - FastAPI app with session cookie authentication (`vendor_admin` / `vendor_pass123`).
-    - Company directory with 5 realistic vendors: Acme Cloud Corp, Global Logistics Ltd, Vertex Analytics, Nexus Software Solutions, Prime Hardware & Supplies.
-    - 22 invoices spanning different dates (requiring genuine date comparison rather than static ordering).
-    - Authentic downloadable PDF generation using ReportLab (`%PDF` binary format with tables, line items, and remittance details).
-    - Generalization test: Standard table layout for 4 vendors; custom card grid layout for `Vertex Analytics` (`layout: cards`).
-  - Built **Internal Finance System (Port 8002)**:
-    - FastAPI app with session cookie authentication (`finance_user` / `finance_pass123`).
-    - "Add Payable" form with vendor, invoice number, amount, due date, and notes fields.
-    - Full persistence to SQLite (`sandbox/data/finance.db`).
-    - Business integrity constraint: Duplicate invoice check rejecting already-registered invoices with HTTP 409 Conflict.
-    - Accounts Payable ledger table and detailed record view pages.
-  - Implemented **Real-World Messiness / Chaos Engine** (controlled via config/env vars, default OFF):
-    - Configurable slow page latency (`CHAOS_SLOW_PAGES`, `CHAOS_DELAY_SECONDS`).
-    - Transient 500 errors on form submit (`CHAOS_500_ON_SUBMIT`, `CHAOS_ERROR_RATE`).
-    - Session expiration forcing re-login (`CHAOS_SESSION_EXPIRY`).
-    - Enforced duplicate submission prevention (`ENFORCE_DUPLICATE_CHECK`).
-  - Implemented **Ground-Truth Testing Endpoints**:
-    - `GET /api/debug/state` on both ports (strictly designated for test harnesses; agent is prohibited from calling these).
-  - Built startup and execution tooling:
-    - `scripts/seed.py`: Generates database, vendor catalog, and authentic PDFs.
-    - `scripts/run_sandbox.sh`: Shell script launching both servers.
-    - `scripts/run_sandbox.py`: Cross-platform Python launcher for Windows/Linux/macOS.
-  - Verification & Testing:
-    - Created `tests/test_sandbox.py` (unit/integration tests via FastAPI TestClient). Passed 100%.
-    - Created `scripts/verify_live_sandbox.py` (spawns real servers on ports 8001/8002, performs live HTTP requests, session auth, PDF download, form submissions, duplicate 409 checks, and debug state validation). Passed 100%.
+  - **Failure Detection & Recovery Engine** ([`agent/failure_detector.py`](agent/failure_detector.py)):
+    - Detects tool exceptions, timeouts, HTTP 500 errors, DOM error banners, element absence, action loops (consecutive identical actions capped at 3), and stagnant progress (state hash deduplication).
+    - Automatically retries transient errors with exponential backoff ($base \times 2^{retry}$, capped at 3 attempts).
+    - Self-heals mid-task session timeouts by detecting login redirects, re-authenticating with authorized environment credentials, and resuming execution.
+    - Handles duplicate invoice submissions (HTTP 409) without crashing by auditing pre-existing ledger records.
+  - **Independent Verification Layer** ([`agent/verifier.py`](agent/verifier.py)):
+    - Completely decoupled from the agent's internal monologue and claims.
+    - Runs in an isolated session, inspects destination ERP database records (`/payables`), and compares all four core fields: Vendor, Invoice Number, Amount, and Due Date.
+    - Issues an authoritative **PASS**, **FAIL**, or **UNCERTAIN** determination backed by structured evidence.
+    - Explicitly segregates claimed outcomes from verified ground truth in execution reports.
+  - **Human-in-the-Loop (HITL) & Safety Architecture** ([`agent/human.py`](agent/human.py), [`agent/safety.py`](agent/safety.py)):
+    - Risk classification: `READ_ONLY`, `REVERSIBLE_WRITE`, and `IRREVERSIBLE_FINANCIAL_WRITE`.
+    - Enforces interactive human authorization for financial writes unless `--auto-approve` is passed.
+    - Safely halts and prompts the user for clarification when prompts or entities are ambiguous rather than hallucinating actions.
+    - Enforces a strict domain allowlist (`127.0.0.1:8001`, `localhost:8001`, `127.0.0.1:8002`, `localhost:8002`).
+    - Quarantines credentials strictly to environment variables.
+    - Wraps external web and PDF text in `<untrusted_web_content>` tags as a prompt-injection defense barrier.
+  - **Document & PDF Processing** ([`agent/pdf_extractor.py`](agent/pdf_extractor.py)):
+    - Uses `pypdf` to extract invoice numbers, due dates, issue dates, and currency amounts directly from authentic downloaded PDF statements.
+  - **CLI & Demonstration Suite**:
+    - Built user-facing CLI: [`agent/cli.py`](agent/cli.py) (`python -m agent.cli --task "..."`).
+    - Built live chaos demonstration script: [`scripts/demonstrate_chaos_and_recovery.py`](scripts/demonstrate_chaos_and_recovery.py).
+    - Automated tests: 7/7 passing in pytest suite (`tests/test_sandbox.py` and `tests/test_agent_resilience.py`).
 - **What's In Progress**:
-  - Designing the agent architecture: tool harness (browser/DOM, file extraction), ReAct planner, memory model, and ground-truth verification layer.
+  - Final packaging, run walkthroughs, and documentation refinement.
 - **What's Next**:
-  - Milestone 3: Implement core agent planner, tool registry (browser navigation, PDF text/date extraction, form completion), and human-in-the-loop safety checkpoints.
-  - Milestone 4: Implement ground-truth verification engine and evidence generation.
+  - Polish evaluation submission notes and finalize repository assets.
 - **Known Issues**:
   - None.
 - **Hardcoded / Mocked Elements (Honesty Record)**:
   - *Hardcoded credentials*: Default credentials in `.env.example` (`vendor_admin:vendor_pass123` and `finance_user:finance_pass123`).
-  - *Synthetic business data*: Seeded vendor names, invoice figures, and dates generated via `scripts/seed.py`.
-  - *Simulated chaos triggers*: Artificial delay and simulated 500 transaction timeout injection.
-  - *Note*: Both web applications, HTTP network sockets, SQLite database transactions, and generated PDF binaries are **100% real and actively running**, not mocked in memory.
+  - *Synthetic business data*: Seeded vendor names and invoices generated via `scripts/seed.py`.
+  - *Simulated chaos triggers*: Artificial latency and simulated transient 500 error toggles.
+  - *Note*: All web interactions, DOM parsing, PDF downloads and parsing, SQLite database insertions, duplicate checks, and independent verification audits are **100% genuine and actively running**.
+
+---
+
+### [2026-10-11] - Milestone 2: Real Running Simulated Corporate Sandbox
+- **What's Done**:
+  - Built **Vendor Portal (Port 8001)** with auth, 5 vendors, 22 invoices, authentic ReportLab PDF generation, and alternative card layout for Vertex Analytics.
+  - Built **Internal Finance System (Port 8002)** with auth, add payable form, SQLite persistence, and duplicate 409 rejection.
+  - Configured controllable real-world chaos engine (slow pages, transient 500s, session expiry).
+  - Configured testing-only ground-truth debug APIs (`GET /api/debug/state`).
+  - Created `scripts/seed.py`, `scripts/run_sandbox.sh`, and `scripts/run_sandbox.py`.
+  - Verified with live socket test suite.
 
 ---
 
 ### [2026-10-11] - Milestone 1: Repo Initialization & Groundwork Setup
 - **What's Done**:
   - Initialized Git repository targeting `main` branch with remote linked to `https://github.com/Rajeevreddy-2006/CentrAlign_Project.git`.
-  - Configured comprehensive `.gitignore` covering Python, Node, environment variables, caches, and execution run logs while preserving sample runs.
-  - Added `.env.example` template with zero committed credentials.
-  - Added MIT `LICENSE`.
-  - Created initial documentation framework: `README.md`, `PROGRESS.md`, `DECISIONS.md`, and `docs/`.
-  - Configured milestone development rules in `.agent/rules.md` and `.agents/rules/milestone-rules.md`.
+  - Configured comprehensive `.gitignore`, `.env.example`, MIT `LICENSE`, `README.md`, `PROGRESS.md`, `DECISIONS.md`, and docs framework.
   - Pushed initial commit to `origin main`.

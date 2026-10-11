@@ -76,3 +76,45 @@ This document records key technical choices, alternatives evaluated, trade-offs,
   - Provide environment-variable chaos toggles (`CHAOS_SLOW_PAGES`, `CHAOS_500_ON_SUBMIT`, `CHAOS_SESSION_EXPIRY`), default OFF for predictability, but toggleable for robustness benchmarking.
   - Provide `GET /api/debug/state` endpoints on both apps explicitly labeled for test harnesses only. The agent's prompt and tools will restrict it to user-facing web interfaces.
 - **Consequences**: Clean separation of concerns between agent perception and external evaluation harnesses.
+
+---
+
+### DEC-0008: Decoupled Independent Verification vs Self-Reported Success
+- **Date**: 2026-10-11
+- **Status**: Accepted
+- **Context**: Agents commonly hallucinate task completion by confusing their intended actions with actual system state transitions.
+- **Decision**: Introduce a distinct `IndependentVerifier` class that executes after the agent signals completion. The verifier opens an isolated browser session, connects directly to the Internal Finance System, queries the SQLite ledger, and compares extracted source invoice values against recorded destination values across all four dimensions (vendor, invoice #, amount, due date).
+- **Consequences**: The system yields an objective **PASS / FAIL / UNCERTAIN** determination. The final report explicitly contrasts what the agent *claimed* with what the verifier *proved*.
+
+---
+
+### DEC-0009: Exponential Backoff, Stagnant Progress, and Loop Detection Architecture
+- **Date**: 2026-10-11
+- **Status**: Accepted
+- **Context**: Network hiccups, transient 500 errors, and infinite loops are primary failure modes in autonomous computer-use agents.
+- **Decision**: Implement `FailureManager` to detect:
+  1. Identical action repetitions (capped at 3 consecutive identical actions to raise `LoopDetectedError`).
+  2. Stagnant progress (detecting identical DOM state hashes following write operations).
+  3. Transient network or HTTP 500 errors (retrying with exponential backoff $base \times 2^{retry}$, capped at 3 retries).
+- **Consequences**: Prevents runaway token burn or frozen loops while providing resilience against flakiness.
+
+---
+
+### DEC-0010: Risk-Tiered Human Approval Gate and Prompt-Injection Defense
+- **Date**: 2026-10-11
+- **Status**: Accepted
+- **Context**: Autonomous agents performing financial actions (creating payables) pose real business risks if unconstrained. Ingesting untrusted third-party web content also introduces prompt injection risks.
+- **Decision**:
+  - Enforce a 3-tier risk classification: `READ_ONLY`, `REVERSIBLE_WRITE`, and `IRREVERSIBLE_FINANCIAL_WRITE`. Any financial disbursement or payable creation requires human confirmation unless `--auto-approve` is explicitly passed.
+  - Ambiguous tasks prompt the user for clarification rather than making ungrounded assumptions.
+  - Web and PDF contents are delimited within `<untrusted_web_content>` tags, and credentials can only be loaded from environment variables, preventing credential leakage or prompt hijacking.
+- **Consequences**: Production-grade safety alignment and auditability.
+
+---
+
+### DEC-0011: Mid-Task Session Timeout Self-Healing
+- **Date**: 2026-10-11
+- **Status**: Accepted
+- **Context**: Enterprise portals routinely expire user sessions after periods of inactivity or request quotas. Traditional scripts crash when encountering unexpected redirect to `/login`.
+- **Decision**: Implement proactive login detection in `BrowserClient` and `AutonomousTaskWorker`. When a session expiration is detected mid-task, the worker pauses the current step, re-authenticates using environment credentials, and resumes the pending action seamlessly.
+- **Consequences**: High task completion autonomy across multi-step flows without requiring user intervention for simple session timeouts.
