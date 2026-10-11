@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}{{ vendor.name }} - Billing Cards View{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">
+      <a href="/vendors" style="color: var(--primary); text-decoration: none;">&larr; All Vendors</a> / {{ vendor.category }}
+    </div>
+    <h1 id="vendor-title">{{ vendor.name }}</h1>
+    <p>Card-based portal view: billing statements, service line items, and remittance schedules.</p>
+  </div>
+</div>
+
+<div class="invoice-grid" id="invoices-grid">
+  {% for inv in vendor.invoices %}
+  <div class="invoice-card" data-invoice-no="{{ inv.invoice_no }}">
+    <div>
+      <div class="invoice-card-header">
+        <div>
+          <span class="invoice-card-number">{{ inv.invoice_no }}</span>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">
+            {{ inv.description }}
+          </div>
+        </div>
+        <span class="badge {% if inv.status == 'Open' %}badge-open{% else %}badge-paid{% endif %}">
+          {{ inv.status }}
+        </span>
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <div class="invoice-meta-row">
+          <span class="invoice-meta-label">Billed Date</span>
+          <span class="invoice-meta-value issue-date">{{ inv.issue_date }}</span>
+        </div>
+        <div class="invoice-meta-row">
+          <span class="invoice-meta-label">Payment Due</span>
+          <span class="invoice-meta-value due-date" style="color: #b91c1c;">{{ inv.due_date }}</span>
+        </div>
+        <div class="invoice-meta-row">
+          <span class="invoice-meta-label">Total Amount</span>
+          <span class="invoice-meta-value amount" style="font-size: 1.05rem;">{{ inv.currency }} {{ "{:,.2f}".format(inv.amount) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="invoice-card-actions">
+      <a href="{{ inv.pdf_url }}" class="btn btn-primary btn-sm btn-download-pdf" download id="download-{{ inv.invoice_no }}">
+        Download Statement (.PDF)
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - Finance Operations ERP{% endblock %}
+
+{% block content %}
+<div class="card form-card">
+  <div style="text-align: center; margin-bottom: 1.5rem;">
+    <h2>Internal Finance System Login</h2>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.35rem;">
+      Authorized personnel only: Accounts Payable and general ledger entry.
+    </p>
+  </div>
+
+  {% if error %}
+    <div class="alert alert-danger" id="login-error">
+      {{ error }}
+    </div>
+  {% endif %}
+
+  <form method="post" action="/login">
+    <div class="form-group">
+      <label for="username">Username</label>
+      <input type="text" id="username" name="username" class="form-control" placeholder="finance_user" value="{{ username or '' }}" required autofocus>
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+    </div>
+
+    <div style="margin-top: 1.5rem;">
+      <button type="submit" id="btn-login-submit" class="btn btn-primary" style="width: 100%;">
+        Sign In to Finance ERP
+      </button>
+    </div>
+  </form>
+
+  <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--text-muted); text-align: center;">
+    <span>Default Demo Credentials:</span> <code>finance_user</code> / <code>finance_pass123</code>
+  </div>
+</div>
+{% endblock %}

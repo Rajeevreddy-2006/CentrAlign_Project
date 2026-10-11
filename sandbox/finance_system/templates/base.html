@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Finance Operations System{% endblock %} - CentrAlign Internal</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <a href="/payables" class="brand">
+      <span>CentrAlign Internal ERP - Accounts Payable</span>
+      <span class="brand-badge">Port 8002</span>
+    </a>
+    <nav>
+      {% if authenticated %}
+        <a href="/payables">Payables Ledger</a>
+        <a href="/payables/add" class="btn btn-primary btn-sm" id="nav-add-payable">+ Add Payable</a>
+        <a href="/api/debug/state" target="_blank" style="font-size: 0.8rem; color: #94a3b8;">[Debug State API]</a>
+        <form action="/logout" method="post" style="display:inline;">
+          <button type="submit" class="btn-logout">Logout ({{ user }})</button>
+        </form>
+      {% else %}
+        <a href="/login" class="btn btn-primary btn-sm">Login</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <p>Internal Financial Accounting &bull; Production SQLite Datastore &bull; Autonomous AI Task Worker Target</p>
+  </footer>
+</body>
+</html>

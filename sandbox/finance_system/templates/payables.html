@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Accounts Payable Ledger{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Accounts Payable Ledger</h1>
+    <p>Persistent record of vendor invoices logged into the central financial system.</p>
+  </div>
+  <div>
+    <a href="/payables/add" class="btn btn-primary" id="btn-add-payable-top">+ Enter New Payable</a>
+  </div>
+</div>
+
+{% if success_message %}
+  <div class="alert alert-success" id="success-message">
+    {{ success_message }}
+  </div>
+{% endif %}
+
+<div class="card">
+  {% if payables %}
+  <table id="payables-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Vendor</th>
+        <th>Invoice #</th>
+        <th>Amount</th>
+        <th>Currency</th>
+        <th>Due Date</th>
+        <th>Status</th>
+        <th>Logged At</th>
+        <th style="text-align: right;">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in payables %}
+      <tr class="payable-row" data-payable-id="{{ p.id }}" data-invoice-no="{{ p.invoice_no }}">
+        <td><code>#{{ p.id }}</code></td>
+        <td class="payable-vendor"><strong>{{ p.vendor }}</strong></td>
+        <td class="payable-invoice-no"><code>{{ p.invoice_no }}</code></td>
+        <td class="payable-amount"><strong>{{ "{:,.2f}".format(p.amount) }}</strong></td>
+        <td>{{ p.currency }}</td>
+        <td class="payable-due-date">{{ p.due_date }}</td>
+        <td>
+          <span class="badge badge-recorded">{{ p.status }}</span>
+        </td>
+        <td style="font-size: 0.8rem; color: var(--text-muted);">
+          {{ p.created_at[:19] }}
+        </td>
+        <td style="text-align: right;">
+          <a href="/payables/{{ p.id }}" class="btn btn-secondary btn-sm" id="view-payable-{{ p.id }}">
+            View Details
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="padding: 3rem 2rem; text-align: center; color: var(--text-muted);" id="empty-payables-state">
+    <p style="font-size: 1.1rem; font-weight: 500; margin-bottom: 0.5rem;">No Accounts Payable Logged Yet</p>
+    <p style="font-size: 0.9rem; margin-bottom: 1.5rem;">Use the "Enter New Payable" form or trigger the autonomous AI worker to process an invoice.</p>
+    <a href="/payables/add" class="btn btn-primary" id="btn-add-first-payable">+ Enter First Payable</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

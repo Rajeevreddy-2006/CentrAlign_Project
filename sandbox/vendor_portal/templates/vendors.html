@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Vendors Directory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Vendor Directory</h1>
+    <p>Select a vendor to inspect billing schedules, invoice history, and downloadable remittance documentation.</p>
+  </div>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Vendor / Company Name</th>
+        <th>Category</th>
+        <th>Invoices on Record</th>
+        <th>Primary Billing Contact</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in vendors %}
+      <tr>
+        <td>
+          <a href="/vendors/{{ v.slug }}" style="font-weight: 600; color: var(--primary); text-decoration: none;">
+            {{ v.name }}
+          </a>
+          {% if v.layout == 'cards' %}
+            <span class="badge" style="background:#fef3c7; color:#92400e; margin-left: 0.5rem; font-size: 0.7rem;">Custom View</span>
+          {% endif %}
+        </td>
+        <td>{{ v.category }}</td>
+        <td><strong>{{ v.invoices|length }}</strong> invoices</td>
+        <td><code>{{ v.contact_email }}</code></td>
+        <td>
+          <a href="/vendors/{{ v.slug }}" class="btn btn-secondary btn-sm" id="view-vendor-{{ v.slug }}">
+            View Invoices &rarr;
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

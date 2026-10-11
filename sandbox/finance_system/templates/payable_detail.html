@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Payable #{{ payable.id }} - Details{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">
+      <a href="/payables" style="color: var(--primary); text-decoration: none;">&larr; Back to Ledger</a> / Payable Record #{{ payable.id }}
+    </div>
+    <h1 id="payable-title">Payable Record #{{ payable.id }}</h1>
+    <p>Audited ledger record saved to SQLite ground truth.</p>
+  </div>
+  <div>
+    <span class="badge badge-recorded" style="font-size: 0.85rem; padding: 0.35rem 0.85rem;">
+      Status: {{ payable.status }}
+    </span>
+  </div>
+</div>
+
+<div class="card" style="padding: 2rem; max-width: 800px; margin: 0 auto;">
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border);">
+    <div>
+      <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Vendor</div>
+      <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-top: 0.25rem;" id="detail-vendor">
+        {{ payable.vendor }}
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Invoice Number</div>
+      <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-top: 0.25rem;" id="detail-invoice-no">
+        <code>{{ payable.invoice_no }}</code>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border);">
+    <div>
+      <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Disbursement Amount</div>
+      <div style="font-size: 1.5rem; font-weight: 800; color: var(--primary); margin-top: 0.25rem;" id="detail-amount">
+        {{ payable.currency }} {{ "{:,.2f}".format(payable.amount) }}
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Payment Due Date</div>
+      <div style="font-size: 1.25rem; font-weight: 700; color: #dc2626; margin-top: 0.25rem;" id="detail-due-date">
+        {{ payable.due_date }}
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 1.5rem;">
+    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Audit & Extraction Notes</div>
+    <div style="margin-top: 0.4rem; padding: 0.85rem; background: #f8fafc; border-radius: 6px; font-size: 0.9rem; color: var(--text-main);" id="detail-notes">
+      {{ payable.notes or 'No notes recorded.' }}
+    </div>
+  </div>
+
+  <div style="background: #f1f5f9; padding: 1rem; border-radius: 6px; font-size: 0.8rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+    <span><strong>System Source:</strong> {{ payable.source }}</span>
+    <span><strong>Recorded Timestamp:</strong> {{ payable.created_at }}</span>
+  </div>
+
+  <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+    <a href="/payables" class="btn btn-secondary">Return to Ledger</a>
+  </div>
+</div>
+{% endblock %}

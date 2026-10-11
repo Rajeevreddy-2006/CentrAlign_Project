@@ -76,3 +76,9 @@ runs/*
 !runs/sample/
 !runs/sample/**
 !runs/.gitkeep
+
+# Local SQLite databases (regenerated via scripts/seed.py)
+*.db
+*.sqlite
+*.sqlite3
+sandbox/data/finance.db

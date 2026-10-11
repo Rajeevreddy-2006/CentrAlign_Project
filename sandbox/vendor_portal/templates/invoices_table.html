@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}{{ vendor.name }} - Invoices{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">
+      <a href="/vendors" style="color: var(--primary); text-decoration: none;">&larr; All Vendors</a> / {{ vendor.category }}
+    </div>
+    <h1 id="vendor-title">{{ vendor.name }}</h1>
+    <p>Billing account history and downloadable invoice statements.</p>
+  </div>
+</div>
+
+<div class="card">
+  <table id="invoices-table">
+    <thead>
+      <tr>
+        <th>Invoice Number</th>
+        <th>Issue Date</th>
+        <th>Due Date</th>
+        <th>Amount</th>
+        <th>Currency</th>
+        <th>Status</th>
+        <th style="text-align: right;">Download Statement</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inv in vendor.invoices %}
+      <tr class="invoice-row" data-invoice-no="{{ inv.invoice_no }}">
+        <td>
+          <strong class="invoice-no">{{ inv.invoice_no }}</strong>
+        </td>
+        <td class="issue-date">{{ inv.issue_date }}</td>
+        <td class="due-date">{{ inv.due_date }}</td>
+        <td class="amount"><strong>{{ "{:,.2f}".format(inv.amount) }}</strong></td>
+        <td class="currency">{{ inv.currency }}</td>
+        <td>
+          <span class="badge {% if inv.status == 'Open' %}badge-open{% else %}badge-paid{% endif %}">
+            {{ inv.status }}
+          </span>
+        </td>
+        <td style="text-align: right;">
+          <a href="{{ inv.pdf_url }}" class="btn btn-secondary btn-sm btn-download-pdf" download id="download-{{ inv.invoice_no }}">
+            Download PDF
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

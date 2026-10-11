@@ -1,0 +1,294 @@
+[
+  {
+    "id": "v-acme",
+    "name": "Acme Cloud Corp",
+    "slug": "acme-cloud",
+    "category": "Cloud Infrastructure & Hosting",
+    "contact_email": "billing@acmecloud.example.com",
+    "layout": "table",
+    "invoices": [
+      {
+        "invoice_no": "INV-ACME-1001",
+        "issue_date": "2026-01-15",
+        "due_date": "2026-02-15",
+        "amount": 1450.0,
+        "currency": "USD",
+        "description": "Monthly Enterprise Kubernetes Cluster & Object Storage",
+        "status": "Paid",
+        "pdf_url": "/download/acme-cloud/INV-ACME-1001.pdf",
+        "pdf_file": "invoices/acme-cloud/INV-ACME-1001.pdf"
+      },
+      {
+        "invoice_no": "INV-ACME-1002",
+        "issue_date": "2026-04-10",
+        "due_date": "2026-05-10",
+        "amount": 1820.5,
+        "currency": "USD",
+        "description": "Compute Instance Auto-scale Bursting & Egress Bandwidth",
+        "status": "Paid",
+        "pdf_url": "/download/acme-cloud/INV-ACME-1002.pdf",
+        "pdf_file": "invoices/acme-cloud/INV-ACME-1002.pdf"
+      },
+      {
+        "invoice_no": "INV-ACME-1003",
+        "issue_date": "2026-07-22",
+        "due_date": "2026-08-22",
+        "amount": 2150.0,
+        "currency": "USD",
+        "description": "Dedicated Database Managed Instances & Daily Snapshots",
+        "status": "Paid",
+        "pdf_url": "/download/acme-cloud/INV-ACME-1003.pdf",
+        "pdf_file": "invoices/acme-cloud/INV-ACME-1003.pdf"
+      },
+      {
+        "invoice_no": "INV-ACME-1004",
+        "issue_date": "2026-09-30",
+        "due_date": "2026-10-30",
+        "amount": 2490.75,
+        "currency": "USD",
+        "description": "Q3 Cloud Capacity Reservation & DDoS Shield Protection",
+        "status": "Open",
+        "pdf_url": "/download/acme-cloud/INV-ACME-1004.pdf",
+        "pdf_file": "invoices/acme-cloud/INV-ACME-1004.pdf"
+      }
+    ]
+  },
+  {
+    "id": "v-global",
+    "name": "Global Logistics Ltd",
+    "slug": "global-logistics",
+    "category": "Freight & Supply Chain",
+    "contact_email": "accounts@globallogistics.example.com",
+    "layout": "table",
+    "invoices": [
+      {
+        "invoice_no": "INV-GL-501",
+        "issue_date": "2025-11-05",
+        "due_date": "2025-12-05",
+        "amount": 5320.0,
+        "currency": "USD",
+        "description": "Regional Freight Haulage & Cross-Dock Warehousing",
+        "status": "Paid",
+        "pdf_url": "/download/global-logistics/INV-GL-501.pdf",
+        "pdf_file": "invoices/global-logistics/INV-GL-501.pdf"
+      },
+      {
+        "invoice_no": "INV-GL-502",
+        "issue_date": "2026-02-18",
+        "due_date": "2026-03-18",
+        "amount": 4890.0,
+        "currency": "USD",
+        "description": "Cold Chain Refrigerated Transit Batch #8812",
+        "status": "Paid",
+        "pdf_url": "/download/global-logistics/INV-GL-502.pdf",
+        "pdf_file": "invoices/global-logistics/INV-GL-502.pdf"
+      },
+      {
+        "invoice_no": "INV-GL-503",
+        "issue_date": "2026-05-12",
+        "due_date": "2026-06-12",
+        "amount": 6110.25,
+        "currency": "USD",
+        "description": "Air Express Consolidated Delivery Route NYC-CHI",
+        "status": "Paid",
+        "pdf_url": "/download/global-logistics/INV-GL-503.pdf",
+        "pdf_file": "invoices/global-logistics/INV-GL-503.pdf"
+      },
+      {
+        "invoice_no": "INV-GL-504",
+        "issue_date": "2026-08-01",
+        "due_date": "2026-09-01",
+        "amount": 5740.0,
+        "currency": "USD",
+        "description": "Harbor Container Offload Handling & Customs Filing",
+        "status": "Paid",
+        "pdf_url": "/download/global-logistics/INV-GL-504.pdf",
+        "pdf_file": "invoices/global-logistics/INV-GL-504.pdf"
+      },
+      {
+        "invoice_no": "INV-GL-505",
+        "issue_date": "2026-10-02",
+        "due_date": "2026-11-02",
+        "amount": 7250.0,
+        "currency": "USD",
+        "description": "End-to-End Fleet Transport & Expedited Delivery",
+        "status": "Open",
+        "pdf_url": "/download/global-logistics/INV-GL-505.pdf",
+        "pdf_file": "invoices/global-logistics/INV-GL-505.pdf"
+      }
+    ]
+  },
+  {
+    "id": "v-vertex",
+    "name": "Vertex Analytics",
+    "slug": "vertex-analytics",
+    "category": "Data Science & BI Platforms",
+    "contact_email": "invoicing@vertexanalytics.example.com",
+    "layout": "cards",
+    "invoices": [
+      {
+        "invoice_no": "INV-VA-201",
+        "issue_date": "2026-02-01",
+        "due_date": "2026-03-01",
+        "amount": 3200.0,
+        "currency": "USD",
+        "description": "Predictive Pipeline SaaS Tier - 50 Seats",
+        "status": "Paid",
+        "pdf_url": "/download/vertex-analytics/INV-VA-201.pdf",
+        "pdf_file": "invoices/vertex-analytics/INV-VA-201.pdf"
+      },
+      {
+        "invoice_no": "INV-VA-202",
+        "issue_date": "2026-04-15",
+        "due_date": "2026-05-15",
+        "amount": 3200.0,
+        "currency": "USD",
+        "description": "Predictive Pipeline SaaS Tier - 50 Seats",
+        "status": "Paid",
+        "pdf_url": "/download/vertex-analytics/INV-VA-202.pdf",
+        "pdf_file": "invoices/vertex-analytics/INV-VA-202.pdf"
+      },
+      {
+        "invoice_no": "INV-VA-203",
+        "issue_date": "2026-06-30",
+        "due_date": "2026-07-30",
+        "amount": 3850.0,
+        "currency": "USD",
+        "description": "Predictive Pipeline SaaS Tier + Custom Vector Index Add-on",
+        "status": "Paid",
+        "pdf_url": "/download/vertex-analytics/INV-VA-203.pdf",
+        "pdf_file": "invoices/vertex-analytics/INV-VA-203.pdf"
+      },
+      {
+        "invoice_no": "INV-VA-204",
+        "issue_date": "2026-09-15",
+        "due_date": "2026-10-15",
+        "amount": 4100.0,
+        "currency": "USD",
+        "description": "Enterprise BI Integration Suite & SLA Support Tier 1",
+        "status": "Open",
+        "pdf_url": "/download/vertex-analytics/INV-VA-204.pdf",
+        "pdf_file": "invoices/vertex-analytics/INV-VA-204.pdf"
+      }
+    ]
+  },
+  {
+    "id": "v-nexus",
+    "name": "Nexus Software Solutions",
+    "slug": "nexus-software",
+    "category": "Enterprise ERP & Workflow Dev",
+    "contact_email": "billing@nexussoftware.example.com",
+    "layout": "table",
+    "invoices": [
+      {
+        "invoice_no": "INV-NX-801",
+        "issue_date": "2026-03-10",
+        "due_date": "2026-04-10",
+        "amount": 9500.0,
+        "currency": "USD",
+        "description": "Phase 1 Custom Connector Engineering & Auth Gateway",
+        "status": "Paid",
+        "pdf_url": "/download/nexus-software/INV-NX-801.pdf",
+        "pdf_file": "invoices/nexus-software/INV-NX-801.pdf"
+      },
+      {
+        "invoice_no": "INV-NX-802",
+        "issue_date": "2026-06-15",
+        "due_date": "2026-07-15",
+        "amount": 9500.0,
+        "currency": "USD",
+        "description": "Phase 2 Security Hardening & Automated Testing Suite",
+        "status": "Paid",
+        "pdf_url": "/download/nexus-software/INV-NX-802.pdf",
+        "pdf_file": "invoices/nexus-software/INV-NX-802.pdf"
+      },
+      {
+        "invoice_no": "INV-NX-803",
+        "issue_date": "2026-09-28",
+        "due_date": "2026-10-28",
+        "amount": 10200.0,
+        "currency": "USD",
+        "description": "Production Cutover, On-Call Maintenance & Knowledge Transfer",
+        "status": "Open",
+        "pdf_url": "/download/nexus-software/INV-NX-803.pdf",
+        "pdf_file": "invoices/nexus-software/INV-NX-803.pdf"
+      }
+    ]
+  },
+  {
+    "id": "v-prime",
+    "name": "Prime Hardware & Supplies",
+    "slug": "prime-supplies",
+    "category": "Office Equipment & Datacenter Gear",
+    "contact_email": "orders@primesupplies.example.com",
+    "layout": "table",
+    "invoices": [
+      {
+        "invoice_no": "INV-PHS-010",
+        "issue_date": "2025-12-10",
+        "due_date": "2026-01-10",
+        "amount": 840.5,
+        "currency": "USD",
+        "description": "Ergonomic Peripherals & High-Speed Cable Bundles",
+        "status": "Paid",
+        "pdf_url": "/download/prime-supplies/INV-PHS-010.pdf",
+        "pdf_file": "invoices/prime-supplies/INV-PHS-010.pdf"
+      },
+      {
+        "invoice_no": "INV-PHS-011",
+        "issue_date": "2026-02-14",
+        "due_date": "2026-03-14",
+        "amount": 1210.0,
+        "currency": "USD",
+        "description": "Datacenter Rack Power Distribution Units (PDUs)",
+        "status": "Paid",
+        "pdf_url": "/download/prime-supplies/INV-PHS-011.pdf",
+        "pdf_file": "invoices/prime-supplies/INV-PHS-011.pdf"
+      },
+      {
+        "invoice_no": "INV-PHS-012",
+        "issue_date": "2026-04-20",
+        "due_date": "2026-05-20",
+        "amount": 675.25,
+        "currency": "USD",
+        "description": "High-Durability Surge Arrestors & Fiber Optic Jumpers",
+        "status": "Paid",
+        "pdf_url": "/download/prime-supplies/INV-PHS-012.pdf",
+        "pdf_file": "invoices/prime-supplies/INV-PHS-012.pdf"
+      },
+      {
+        "invoice_no": "INV-PHS-013",
+        "issue_date": "2026-07-04",
+        "due_date": "2026-08-04",
+        "amount": 1890.0,
+        "currency": "USD",
+        "description": "Dual-Monitor Mounts, Power Banks & Smart Strips",
+        "status": "Paid",
+        "pdf_url": "/download/prime-supplies/INV-PHS-013.pdf",
+        "pdf_file": "invoices/prime-supplies/INV-PHS-013.pdf"
+      },
+      {
+        "invoice_no": "INV-PHS-014",
+        "issue_date": "2026-08-25",
+        "due_date": "2026-09-25",
+        "amount": 1430.8,
+        "currency": "USD",
+        "description": "Cat6e Shielded Spools & Patch Panel Modular Blocks",
+        "status": "Paid",
+        "pdf_url": "/download/prime-supplies/INV-PHS-014.pdf",
+        "pdf_file": "invoices/prime-supplies/INV-PHS-014.pdf"
+      },
+      {
+        "invoice_no": "INV-PHS-015",
+        "issue_date": "2026-10-05",
+        "due_date": "2026-11-05",
+        "amount": 2195.4,
+        "currency": "USD",
+        "description": "Smart UPS 3000VA Backup Power Station Battery Modules",
+        "status": "Open",
+        "pdf_url": "/download/prime-supplies/INV-PHS-015.pdf",
+        "pdf_file": "invoices/prime-supplies/INV-PHS-015.pdf"
+      }
+    ]
+  }
+]
