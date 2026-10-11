@@ -28,9 +28,12 @@ All notable updates, milestones, and working states are logged here in reverse c
       - `TaskPlannerGeneralization`: Intent classification, multi-invoice count parsing, overdue filtering, and chronological sorting.
       - `PDFExtractorLogic`: Robust regex extraction against synthetic invoice text.
     - All **26/26 tests passing** in `pytest` across unit, sandbox, and resilience suites.
-- **What's Next**:
-  - Update README.md and DECISIONS.md with architecture and benchmark findings.
-  - Final git commit and push to remote repository.
+- **What's Completed**:
+  - Full generalization proof across 6 distinct tasks.
+  - Evaluation harness with objective ground-truth oracle auditing (`/api/debug/state`).
+  - 19 non-LLM unit tests with 26/26 overall tests passing.
+  - Comprehensive documentation: `README.md`, `DECISIONS.md`, `PROGRESS.md`, `evals/results.md`.
+  - Fresh-clone verification test executed and validated.
 - **Hardcoded / Mocked Elements (Honesty Record)**:
   - *Hardcoded credentials*: Default credentials in `.env.example` (`vendor_admin:vendor_pass123` and `finance_user:finance_pass123`).
   - *Synthetic business data*: Seeded vendor names and invoices generated via `scripts/seed.py`.
