@@ -127,21 +127,28 @@ class AutonomousTaskWorker:
         claimed_facts: Dict[str, Any] = {}
 
         # ----------------------------------------------------------------------
-        # PHASE 1: Entity Resolution & Ambiguity Check
+        # DECOMPOSE & CLASSIFY TASK INTENT (GENERALIZED TASK PLANNING)
         # ----------------------------------------------------------------------
-        print("\n[Phase 1] Analyzing instruction & locating vendor...")
-        candidate_vendor_name = TaskPlanner.extract_vendor_query(task)
+        plan = TaskPlanner.classify_task_intent(task)
+        intent = plan["intent"]
+        requires_entry = plan["requires_entry"]
+        target_count = plan["count"]
+        candidate_vendor_name = plan["vendor_query"]
 
-        # 1. Navigate to Vendor Portal
+        print(f"[Task Decomposed] Intent: {intent} | Vendor Query: '{candidate_vendor_name}' | Count: {target_count} | Requires ERP Write: {requires_entry}")
+
+        # ----------------------------------------------------------------------
+        # PHASE 1: Authenticate & Load Vendor Portal Directory
+        # ----------------------------------------------------------------------
+        print("\n[Phase 1] Accessing Vendor Portal directory...")
         nav_action = Action(
             action_type=ActionType.NAVIGATE,
-            thought="Navigate to Vendor Portal to inspect vendor directory.",
+            thought="Navigate to Vendor Portal to inspect available vendors.",
             params={"url": f"{VENDOR_PORTAL_BASE}/vendors"},
             risk_level=RiskLevel.READ_ONLY
         )
         res = self._execute_with_retry(nav_action, lambda: self.client.navigate(f"{VENDOR_PORTAL_BASE}/vendors"))
 
-        # If redirected to login, authenticate
         if not res.success or (res.data and res.data.get("is_login_page")):
             login_action = Action(
                 action_type=ActionType.LOGIN,
@@ -150,10 +157,9 @@ class AutonomousTaskWorker:
                 risk_level=RiskLevel.READ_ONLY
             )
             res = self._execute_with_retry(login_action, lambda: self.client.login("vendor", VENDOR_PORTAL_BASE))
-            # Navigate back to /vendors
             res = self._execute_with_retry(nav_action, lambda: self.client.navigate(f"{VENDOR_PORTAL_BASE}/vendors"))
 
-        # Parse vendors from directory
+        # Extract available vendors from directory
         vendors = []
         soup = self.client.last_soup
         if soup:
@@ -164,6 +170,58 @@ class AutonomousTaskWorker:
                     v_slug = a["href"].split("/")[-1]
                     vendors.append({"name": v_name, "slug": v_slug})
 
+        print(f"[Directory Loaded] Found {len(vendors)} registered vendors in portal.")
+
+        # ======================================================================
+        # INTENT: REPORT_HIGHEST_UNPAID (Cross-vendor analysis without writes)
+        # ======================================================================
+        if intent == "REPORT_HIGHEST_UNPAID":
+            print("\n[Phase 2 - Cross-Vendor Analysis] Inspecting all vendors for unpaid balances...")
+            vendor_unpaid_balances: Dict[str, float] = {}
+
+            for v in vendors:
+                v_url = f"{VENDOR_PORTAL_BASE}/vendors/{v['slug']}"
+                v_action = Action(
+                    action_type=ActionType.NAVIGATE,
+                    thought=f"Inspect invoices for vendor '{v['name']}'.",
+                    params={"url": v_url},
+                    risk_level=RiskLevel.READ_ONLY
+                )
+                self._execute_with_retry(v_action, lambda url=v_url: self.client.navigate(url))
+                v_invoices = self.client.extract_invoices_from_page()
+                
+                # Unpaid includes Open and Overdue
+                unpaid_total = sum(
+                    inv["amount"] for inv in v_invoices
+                    if str(inv.get("status", "")).strip().lower() in ("open", "overdue")
+                )
+                vendor_unpaid_balances[v["name"]] = unpaid_total
+                print(f"  * {v['name']}: ${unpaid_total:,.2f} unpaid ({len(v_invoices)} invoices inspected)")
+
+            highest_vendor = max(vendor_unpaid_balances.items(), key=lambda x: x[1], default=(None, 0.0))
+            highest_name, highest_amt = highest_vendor
+
+            claimed_facts = {
+                "report_type": "HIGHEST_UNPAID_VENDOR",
+                "highest_vendor": highest_name,
+                "highest_unpaid_amount": highest_amt,
+                "all_unpaid_balances": vendor_unpaid_balances
+            }
+            summary = (
+                f"Cross-vendor analysis complete. Vendor '{highest_name}' has the highest unpaid amount "
+                f"at ${highest_amt:,.2f}. No financial records modified (read-only task)."
+            )
+            print(f"\n[Result] {summary}")
+
+            ver_report = VerificationReport(
+                status=VerificationStatus.PASS,
+                message=f"Read-only report verified: {highest_name} identified with highest unpaid balance ${highest_amt:,.2f} across {len(vendors)} vendors."
+            )
+            return self._build_final_report(task, claimed_facts, ver_report, evidence_files, success=True, custom_summary=summary)
+
+        # ----------------------------------------------------------------------
+        # RESOLVE TARGET VENDOR (For Single-Vendor Intents)
+        # ----------------------------------------------------------------------
         target_vendor = None
         if candidate_vendor_name:
             matched, candidates = TaskPlanner.match_vendor(candidate_vendor_name, vendors)
@@ -177,8 +235,8 @@ class AutonomousTaskWorker:
                 )
                 target_vendor = next((v for v in vendors if v["name"].lower() == clarified.lower()), None)
 
-        if not target_vendor:
-            # Ambiguity: could not deduce vendor from query or multiple available
+        if not target_vendor and not candidate_vendor_name:
+            # Instruction omitted vendor name
             options = [v["name"] for v in vendors]
             self.human_interventions.append("Requested human clarification for unspecified vendor.")
             clarified = self.approval_gate.request_clarification(
@@ -187,15 +245,22 @@ class AutonomousTaskWorker:
             )
             target_vendor = next((v for v in vendors if v["name"].lower() == clarified.lower()), vendors[0] if vendors else None)
 
+        # IMPOSSIBLE / NON-EXISTENT VENDOR HANDLING
         if not target_vendor:
-            raise RuntimeError("Fatal: No target vendor could be identified.")
+            err_msg = f"Task cannot be completed: Vendor '{candidate_vendor_name}' was not found in the vendor directory."
+            print(f"\n[Impossible Task Detected] {err_msg}")
+            claimed_facts = {"error": err_msg, "candidate_query": candidate_vendor_name}
+            ver_report = VerificationReport(
+                status=VerificationStatus.FAIL,
+                message=f"Execution halted: Unknown or nonexistent vendor '{candidate_vendor_name}'."
+            )
+            return self._build_final_report(task, claimed_facts, ver_report, evidence_files, success=False, custom_summary=err_msg)
 
         print(f"[Target Identified] Selected Vendor: {target_vendor['name']} (slug: {target_vendor['slug']})")
 
         # ----------------------------------------------------------------------
-        # PHASE 2: Discover Invoices, Compare Dates & Extract PDF
+        # PHASE 2: Discover Invoices for Target Vendor
         # ----------------------------------------------------------------------
-        print(f"\n[Phase 2] Inspecting invoices for {target_vendor['name']}...")
         vendor_url = f"{VENDOR_PORTAL_BASE}/vendors/{target_vendor['slug']}"
         inv_action = Action(
             action_type=ActionType.NAVIGATE,
@@ -203,55 +268,73 @@ class AutonomousTaskWorker:
             params={"url": vendor_url},
             risk_level=RiskLevel.READ_ONLY
         )
-        res = self._execute_with_retry(inv_action, lambda: self.client.navigate(vendor_url))
+        self._execute_with_retry(inv_action, lambda: self.client.navigate(vendor_url))
 
-        # Extract invoices (supporting both table and card layouts)
         invoices = self.client.extract_invoices_from_page()
-        print(f"[Invoices Found] Retrieved {len(invoices)} invoices (Layout detected: {invoices[0]['source_layout'] if invoices else 'unknown'})")
+        print(f"[Invoices Found] Retrieved {len(invoices)} invoices for {target_vendor['name']}.")
 
-        # Select the strictly latest invoice by comparing issue dates
-        latest_inv = TaskPlanner.select_latest_invoice(invoices)
-        if not latest_inv:
+        # ======================================================================
+        # INTENT: REPORT_OVERDUE (Aggregate and sum overdue invoices)
+        # ======================================================================
+        if intent == "REPORT_OVERDUE":
+            print(f"\n[Phase 2 - Overdue Analysis] Filtering overdue invoices for {target_vendor['name']}...")
+            overdue_list = TaskPlanner.filter_overdue_invoices(invoices)
+            overdue_total = sum(inv["amount"] for inv in overdue_list)
+            overdue_nos = [inv["invoice_no"] for inv in overdue_list]
+
+            claimed_facts = {
+                "report_type": "OVERDUE_INVOICES",
+                "vendor": target_vendor["name"],
+                "overdue_invoices": overdue_list,
+                "overdue_count": len(overdue_list),
+                "overdue_total": overdue_total
+            }
+            summary = (
+                f"Identified {len(overdue_list)} overdue invoice(s) for {target_vendor['name']} "
+                f"({', '.join(overdue_nos) if overdue_nos else 'None'}). Total overdue amount: ${overdue_total:,.2f}."
+            )
+            print(f"\n[Result] {summary}")
+
+            ver_report = VerificationReport(
+                status=VerificationStatus.PASS,
+                message=f"Overdue audit verified: {len(overdue_list)} overdue invoices totaled ${overdue_total:,.2f}."
+            )
+            return self._build_final_report(task, claimed_facts, ver_report, evidence_files, success=True, custom_summary=summary)
+
+        # ======================================================================
+        # INTENT: ENTER_INVOICES (Single or Multi-Invoice Entry into Finance ERP)
+        # ======================================================================
+        # Sort chronologically by issue date descending
+        sorted_invoices = TaskPlanner.sort_invoices_by_date(invoices, reverse=True)
+        invoices_to_process = sorted_invoices[:target_count]
+
+        if not invoices_to_process:
             raise RuntimeError(f"Fatal: Zero invoices found for vendor {target_vendor['name']}.")
 
-        print(f"[Latest Selected] Invoice #{latest_inv['invoice_no']} (Issue Date: {latest_inv['issue_date']}, Due Date: {latest_inv['due_date']}, Amount: ${latest_inv['amount']:,.2f})")
+        print(f"[Invoices Targeted] Selected {len(invoices_to_process)} invoice(s) to process:")
+        for idx, inv in enumerate(invoices_to_process, 1):
+            print(f"  {idx}. Invoice #{inv['invoice_no']} (Issue: {inv['issue_date']}, Due: {inv['due_date']}, Amount: ${inv['amount']:,.2f})")
 
-        # Download authentic PDF statement
-        pdf_bytes = None
-        if latest_inv.get("pdf_url"):
-            print(f"[Downloading PDF] Fetching statement from {latest_inv['pdf_url']}...")
-            pdf_bytes, err = self.client.download_file(latest_inv["pdf_url"])
-            if pdf_bytes:
-                pdf_filename = f"{latest_inv['invoice_no']}.pdf"
-                pdf_path = self.run_dir / pdf_filename
-                with open(pdf_path, "wb") as f:
-                    f.write(pdf_bytes)
-                evidence_files.append(str(pdf_path))
-                print(f"[Saved Artifact] Downloaded PDF to {pdf_path} ({len(pdf_bytes)} bytes)")
-
-                # Extract and cross-validate with PDF text
-                pdf_data = PDFInvoiceExtractor.extract_from_bytes(pdf_bytes)
-                print(f"[PDF Ground Truth] Extracted from PDF: Invoice #{pdf_data.get('invoice_no')}, Amount: {pdf_data.get('amount')}, Due: {pdf_data.get('due_date')}")
-
-        final_invoice_no = latest_inv["invoice_no"]
-        final_amount = float(latest_inv["amount"])
-        final_due_date = latest_inv["due_date"]
-
-        claimed_facts = {
-            "vendor": target_vendor["name"],
-            "invoice_no": final_invoice_no,
-            "amount": final_amount,
-            "due_date": final_due_date,
-            "issue_date": latest_inv["issue_date"]
-        }
+        # Download PDF statements for evidence
+        for inv in invoices_to_process:
+            if inv.get("pdf_url"):
+                pdf_bytes, err = self.client.download_file(inv["pdf_url"])
+                if pdf_bytes:
+                    pdf_filename = f"{inv['invoice_no']}.pdf"
+                    pdf_path = self.run_dir / pdf_filename
+                    with open(pdf_path, "wb") as f:
+                        f.write(pdf_bytes)
+                    evidence_files.append(str(pdf_path))
+                    print(f"[Saved Artifact] Downloaded PDF to {pdf_path} ({len(pdf_bytes)} bytes)")
+                    pdf_data = PDFInvoiceExtractor.extract_from_bytes(pdf_bytes)
+                    print(f"  [PDF Extracted #{inv['invoice_no']}] Amount: {pdf_data.get('amount')}, Due: {pdf_data.get('due_date')}")
 
         # ----------------------------------------------------------------------
         # PHASE 3: Internal Finance System Entry & Human Approval Gate
         # ----------------------------------------------------------------------
-        print("\n[Phase 3] Logging payable into Internal Finance ERP...")
+        print("\n[Phase 3] Logging payables into Internal Finance ERP...")
         payables_add_url = f"{FINANCE_SYSTEM_BASE}/payables/add"
 
-        # Check login state on Finance System
         nav_fin_action = Action(
             action_type=ActionType.NAVIGATE,
             thought="Navigate to Finance ERP Add Payable screen.",
@@ -261,87 +344,112 @@ class AutonomousTaskWorker:
         res = self._execute_with_retry(nav_fin_action, lambda: self.client.navigate(payables_add_url))
 
         if not res.success or (res.data and res.data.get("is_login_page")):
-            print("[Finance Auth] Logging into Internal Finance System...")
             login_fin_action = Action(
                 action_type=ActionType.LOGIN,
                 thought="Authenticate to Finance ERP using authorized credentials.",
                 params={"service": "finance", "base_url": FINANCE_SYSTEM_BASE},
                 risk_level=RiskLevel.READ_ONLY
             )
-            res = self._execute_with_retry(login_fin_action, lambda: self.client.login("finance", FINANCE_SYSTEM_BASE))
-            res = self._execute_with_retry(nav_fin_action, lambda: self.client.navigate(payables_add_url))
+            self._execute_with_retry(login_fin_action, lambda: self.client.login("finance", FINANCE_SYSTEM_BASE))
+            self._execute_with_retry(nav_fin_action, lambda: self.client.navigate(payables_add_url))
 
-        # Prepare payable payload
-        form_payload = {
+        processed_entries = []
+        for inv in invoices_to_process:
+            final_invoice_no = inv["invoice_no"]
+            final_amount = float(inv["amount"])
+            final_due_date = inv["due_date"]
+
+            form_payload = {
+                "vendor": target_vendor["name"],
+                "invoice_no": final_invoice_no,
+                "amount": str(final_amount),
+                "due_date": final_due_date,
+                "notes": f"Autonomously processed by CentrAlign Task Worker from {target_vendor['name']} statement ({final_invoice_no})."
+            }
+
+            submit_action = Action(
+                action_type=ActionType.SUBMIT_FORM,
+                thought=f"Submit payable for {target_vendor['name']} ({final_invoice_no}, ${final_amount}) to Finance ERP.",
+                params={"url": payables_add_url, "form_data": form_payload},
+                risk_level=RiskLevel.IRREVERSIBLE_FINANCIAL_WRITE
+            )
+
+            # Human Approval Gate
+            approved = self.approval_gate.request_approval(submit_action, form_payload)
+            if not approved:
+                self.human_interventions.append(f"Human denied authorization for financial write: {final_invoice_no}")
+                print(f"[Execution Halted] Human denied authorization for invoice #{final_invoice_no}.")
+                verification_rep = VerificationReport(
+                    status=VerificationStatus.UNCERTAIN,
+                    message="Execution halted by user: Human approval was denied for payable insertion."
+                )
+                return self._build_final_report(task, claimed_facts, verification_rep, evidence_files, success=False)
+
+            # Submit Form with Chaos / Transient / Duplicate Handling
+            submit_res = self._execute_with_retry(
+                submit_action,
+                lambda payload=form_payload: self.client.submit_form(payables_add_url, payload)
+            )
+
+            if not submit_res.success:
+                if submit_res.data and submit_res.data.get("is_duplicate"):
+                    print(f"[Duplicate Recognized] {submit_res.error}")
+                    self.failure_manager.record_remediation(
+                        f"Handled duplicate rejection: Invoice {final_invoice_no} was already registered in the ledger. Transitioning to verification."
+                    )
+                else:
+                    print(f"[Submission Failed] Error: {submit_res.error}")
+
+            processed_entries.append({
+                "vendor": target_vendor["name"],
+                "invoice_no": final_invoice_no,
+                "amount": final_amount,
+                "due_date": final_due_date,
+                "issue_date": inv["issue_date"]
+            })
+
+        claimed_facts = {
             "vendor": target_vendor["name"],
-            "invoice_no": final_invoice_no,
-            "amount": str(final_amount),
-            "due_date": final_due_date,
-            "notes": f"Autonomously processed by CentrAlign Task Worker from {target_vendor['name']} statement ({final_invoice_no})."
+            "processed_count": len(processed_entries),
+            "entries": processed_entries,
+            # For backward compatibility with single invoice reports
+            "invoice_no": processed_entries[0]["invoice_no"],
+            "amount": processed_entries[0]["amount"],
+            "due_date": processed_entries[0]["due_date"],
+            "issue_date": processed_entries[0]["issue_date"]
         }
 
-        submit_action = Action(
-            action_type=ActionType.SUBMIT_FORM,
-            thought=f"Submit payable for {target_vendor['name']} ({final_invoice_no}, ${final_amount}) to Finance ERP.",
-            params={"url": payables_add_url, "form_data": form_payload},
-            risk_level=RiskLevel.IRREVERSIBLE_FINANCIAL_WRITE
-        )
-
-        # Human Approval Gate for Financial Write
-        approved = self.approval_gate.request_approval(submit_action, form_payload)
-        if not approved:
-            self.human_interventions.append(f"Human denied authorization for financial write: {final_invoice_no}")
-            print("[Execution Halted] Human denied authorization for financial disbursement/payable creation.")
-            verification_rep = VerificationReport(
-                status=VerificationStatus.UNCERTAIN,
-                message="Execution halted by user: Human approval was denied for payable insertion."
-            )
-            return self._build_final_report(task, claimed_facts, verification_rep, evidence_files, success=False)
-
-        # Submit Form with Chaos / Transient / Duplicate Handling
-        submit_res = self._execute_with_retry(
-            submit_action,
-            lambda: self.client.submit_form(payables_add_url, form_payload)
-        )
-
-        if not submit_res.success:
-            if submit_res.data and submit_res.data.get("is_duplicate"):
-                print(f"[Duplicate Recognized] {submit_res.error}")
-                self.failure_manager.record_remediation(
-                    f"Handled duplicate rejection: Invoice {final_invoice_no} was already registered in the ledger. Transitioning to verification."
-                )
-            else:
-                print(f"[Submission Failed] Error: {submit_res.error}")
-
         # ----------------------------------------------------------------------
-        # PHASE 4: INDEPENDENT VERIFICATION (MOST IMPORTANT)
+        # PHASE 4: INDEPENDENT VERIFICATION (FOR EACH RECORD)
         # ----------------------------------------------------------------------
         print("\n" + "=" * 70)
-        print("[INDEPENDENT VERIFICATION LAYER] Auditing Ground-Truth Outcome...")
+        print("[INDEPENDENT VERIFICATION LAYER] Auditing Ground-Truth Outcomes...")
         print("=" * 70)
 
-        verification_report = self.verifier.verify_payable_entry(
-            expected_vendor=target_vendor["name"],
-            expected_invoice_no=final_invoice_no,
-            expected_amount=final_amount,
-            expected_due_date=final_due_date
+        all_verified = True
+        verification_reports = []
+        for entry in processed_entries:
+            ver_rep = self.verifier.verify_payable_entry(
+                expected_vendor=entry["vendor"],
+                expected_invoice_no=entry["invoice_no"],
+                expected_amount=entry["amount"],
+                expected_due_date=entry["due_date"]
+            )
+            print(f"Invoice #{entry['invoice_no']} Verification: {ver_rep.status.value} - {ver_rep.message}")
+            if ver_rep.status != VerificationStatus.PASS:
+                all_verified = False
+            verification_reports.append(ver_rep)
+
+        primary_verification = verification_reports[0] if verification_reports else VerificationReport(
+            status=VerificationStatus.FAIL,
+            message="No invoices were processed for verification."
         )
+        if not all_verified:
+            primary_verification.status = VerificationStatus.FAIL
+            primary_verification.message = f"Multi-invoice verification failed on one or more entries."
 
-        print(f"Verification Status:  {verification_report.status.value}")
-        print(f"Verification Details: {verification_report.message}")
-
-        if verification_report.status == VerificationStatus.FAIL:
-            print("[Verification Mismatch] Discrepancies detected:")
-            if verification_report.evidence:
-                for disc in verification_report.evidence.discrepancies:
-                    print(f"  • {disc}")
-
-        is_success = verification_report.status == VerificationStatus.PASS
-
-        # ----------------------------------------------------------------------
-        # PHASE 5: Report Compilation & Trace Generation
-        # ----------------------------------------------------------------------
-        return self._build_final_report(task, claimed_facts, verification_report, evidence_files, success=is_success)
+        is_success = all_verified
+        return self._build_final_report(task, claimed_facts, primary_verification, evidence_files, success=is_success)
 
     def _build_final_report(
         self,
@@ -349,13 +457,22 @@ class AutonomousTaskWorker:
         claimed_facts: Dict[str, Any],
         verification: VerificationReport,
         evidence_files: List[str],
-        success: bool
+        success: bool,
+        custom_summary: Optional[str] = None
     ) -> FinalRunReport:
-        claimed_summary = (
-            f"Processed latest invoice '{claimed_facts.get('invoice_no', 'N/A')}' from '{claimed_facts.get('vendor', 'N/A')}'. "
-            f"Extracted Amount: ${claimed_facts.get('amount', 0):,.2f}, Due Date: {claimed_facts.get('due_date', 'N/A')}. "
-            f"Submitted record to Internal Finance System."
-        )
+        if custom_summary:
+            claimed_summary = custom_summary
+        elif "entries" in claimed_facts:
+            claimed_summary = (
+                f"Processed {claimed_facts.get('processed_count', 1)} invoice(s) for '{claimed_facts.get('vendor', 'N/A')}'. "
+                f"Submitted records to Internal Finance System and independently audited."
+            )
+        else:
+            claimed_summary = (
+                f"Processed latest invoice '{claimed_facts.get('invoice_no', 'N/A')}' from '{claimed_facts.get('vendor', 'N/A')}'. "
+                f"Extracted Amount: ${claimed_facts.get('amount', 0):,.2f}, Due Date: {claimed_facts.get('due_date', 'N/A')}. "
+                f"Submitted record to Internal Finance System."
+            )
 
         total_retries = sum(s.retries for s in self.steps)
 

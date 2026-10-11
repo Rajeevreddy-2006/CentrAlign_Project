@@ -294,12 +294,17 @@ class BrowserClient:
                     except ValueError:
                         amount = 0.0
 
+                    # Status badge
+                    status_elem = row.find("span", class_="badge")
+                    inv_status = status_elem.get_text(strip=True) if status_elem else (cols[5] if len(cols) > 5 else "Open")
+
                     invoices.append({
                         "invoice_no": inv_no,
                         "issue_date": issue_date,
                         "due_date": due_date,
                         "amount": amount,
                         "currency": currency,
+                        "status": inv_status,
                         "pdf_url": pdf_link,
                         "source_layout": "table"
                     })
@@ -316,6 +321,9 @@ class BrowserClient:
 
                 due_elem = card.select_one(".due-date")
                 due_date = due_elem.get_text(strip=True) if due_elem else ""
+
+                status_elem = card.select_one(".badge")
+                inv_status = status_elem.get_text(strip=True) if status_elem else "Open"
 
                 amount_elem = card.select_one(".amount")
                 amount_str = amount_elem.get_text(strip=True) if amount_elem else "0"
@@ -337,6 +345,7 @@ class BrowserClient:
                     "due_date": due_date,
                     "amount": amount,
                     "currency": "USD",
+                    "status": inv_status,
                     "pdf_url": pdf_link,
                     "source_layout": "cards"
                 })

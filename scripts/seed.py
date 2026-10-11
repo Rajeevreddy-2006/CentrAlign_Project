@@ -66,7 +66,7 @@ SEED_VENDORS = [
                 "amount": 2150.00,
                 "currency": "USD",
                 "description": "Dedicated Database Managed Instances & Daily Snapshots",
-                "status": "Paid"
+                "status": "Overdue"
             },
             {
                 "invoice_no": "INV-ACME-1004",

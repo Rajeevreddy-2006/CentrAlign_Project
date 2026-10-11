@@ -1,0 +1,94 @@
+# evals/tasks.yaml
+# Evaluation Benchmark Suite for Autonomous AI Task Worker
+# Contains varied, generalized business tasks running through the SAME unchanged agent codebase.
+
+benchmark_metadata:
+  suite_name: "CentrAlign AI Task Worker Generalization & Reliability Benchmark"
+  version: "1.0.0"
+  reference_date: "2026-10-11"
+
+tasks:
+  - id: "task_01_standard_latest_invoice_entry"
+    name: "Standard Latest Invoice Entry (Table Layout)"
+    task: "Find the latest invoice from Acme Cloud Corp, extract the amount and due date, enter it into our internal system, and tell me once it is done."
+    chaos_mode: false
+    expected_outcome:
+      intent: "ENTER_INVOICES"
+      should_succeed: true
+      writes_to_finance: true
+      vendor: "Acme Cloud Corp"
+      invoice_no: "INV-ACME-1004"
+      expected_amount: 2490.75
+      expected_due_date: "2026-10-30"
+
+  - id: "task_02_card_layout_latest_invoice_entry"
+    name: "Card Layout Latest Invoice Entry (DOM Layout Generalization)"
+    task: "Find the latest invoice from Vertex Analytics, extract the amount and due date, enter it into the internal finance system, and notify me."
+    chaos_mode: false
+    expected_outcome:
+      intent: "ENTER_INVOICES"
+      should_succeed: true
+      writes_to_finance: true
+      vendor: "Vertex Analytics"
+      invoice_no: "INV-VA-204"
+      expected_amount: 4100.00
+      expected_due_date: "2026-10-15"
+
+  - id: "task_03_overdue_invoices_aggregation"
+    name: "Overdue Invoices Aggregation & Total Reporting"
+    task: "List all invoices from Acme Cloud Corp that are overdue and tell me the total."
+    chaos_mode: false
+    expected_outcome:
+      intent: "REPORT_OVERDUE"
+      should_succeed: true
+      writes_to_finance: false
+      vendor: "Acme Cloud Corp"
+      expected_overdue_count: 1
+      expected_overdue_invoices: ["INV-ACME-1003"]
+      expected_overdue_total: 2150.00
+
+  - id: "task_04_cross_vendor_highest_unpaid"
+    name: "Cross-Vendor Highest Unpaid Amount Comparison (Read-Only)"
+    task: "Which vendor has the highest unpaid amount? Enter nothing, just report."
+    chaos_mode: false
+    expected_outcome:
+      intent: "REPORT_HIGHEST_UNPAID"
+      should_succeed: true
+      writes_to_finance: false
+      expected_highest_vendor: "Nexus Software Solutions"
+      expected_highest_unpaid_amount: 10200.00
+
+  - id: "task_05_multi_invoice_entry"
+    name: "Multi-Invoice Ingestion (2 Most Recent Invoices)"
+    task: "Enter the 2 most recent invoices from Acme Cloud Corp into the finance system."
+    chaos_mode: false
+    expected_outcome:
+      intent: "ENTER_INVOICES"
+      should_succeed: true
+      writes_to_finance: true
+      vendor: "Acme Cloud Corp"
+      expected_entry_count: 2
+      expected_invoices: ["INV-ACME-1004", "INV-ACME-1003"]
+
+  - id: "task_06_impossible_nonexistent_vendor"
+    name: "Impossible Task: Nonexistent Vendor Escalation"
+    task: "Find the latest invoice from Cyberdyne Systems and record it in finance."
+    chaos_mode: false
+    expected_outcome:
+      intent: "ENTER_INVOICES"
+      should_succeed: false
+      writes_to_finance: false
+      expected_error_contains: "not found in the vendor directory"
+
+  - id: "task_07_chaos_resilience_latest_invoice"
+    name: "Chaos Mode Resilience: Latest Invoice Entry Under Network Faults"
+    task: "Find the latest invoice from Global Logistics Ltd, extract the amount and due date, enter it into our internal system, and tell me once it is done."
+    chaos_mode: true
+    expected_outcome:
+      intent: "ENTER_INVOICES"
+      should_succeed: true
+      writes_to_finance: true
+      vendor: "Global Logistics Ltd"
+      invoice_no: "INV-GL-505"
+      expected_amount: 7250.00
+      expected_due_date: "2026-11-02"

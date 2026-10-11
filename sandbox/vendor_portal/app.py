@@ -1,3 +1,4 @@
+import os
 import json
 import asyncio
 from pathlib import Path
@@ -53,14 +54,19 @@ def get_session_user(request: Request) -> Optional[str]:
 
 async def apply_chaos_if_enabled(request: Request, user: Optional[str]) -> Optional[Response]:
     """Applies latency injection and session expiry chaos."""
-    if CHAOS_SLOW_PAGES:
-        await asyncio.sleep(CHAOS_DELAY_SECONDS)
+    slow_pages = os.getenv("CHAOS_SLOW_PAGES", "false").lower() in ("true", "1", "yes") or CHAOS_SLOW_PAGES
+    delay_secs = float(os.getenv("CHAOS_DELAY_SECONDS", str(CHAOS_DELAY_SECONDS)))
+    session_expiry = os.getenv("CHAOS_SESSION_EXPIRY", "false").lower() in ("true", "1", "yes") or CHAOS_SESSION_EXPIRY
+    max_reqs = int(os.getenv("CHAOS_SESSION_MAX_REQUESTS", str(CHAOS_SESSION_MAX_REQUESTS)))
 
-    if CHAOS_SESSION_EXPIRY and user:
+    if slow_pages and delay_secs > 0:
+        await asyncio.sleep(delay_secs)
+
+    if session_expiry and user:
         session_id = request.cookies.get("vp_session", "")
         count = SESSION_REQUEST_COUNTS.get(session_id, 0) + 1
         SESSION_REQUEST_COUNTS[session_id] = count
-        if count > CHAOS_SESSION_MAX_REQUESTS:
+        if count > max_reqs:
             # Force session expiry
             resp = RedirectResponse(url="/login?error=Session+expired+due+to+inactivity.+Please+re-authenticate.", status_code=status.HTTP_303_SEE_OTHER)
             resp.delete_cookie("vp_session")

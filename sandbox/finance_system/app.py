@@ -1,3 +1,4 @@
+import os
 import random
 import asyncio
 from pathlib import Path
@@ -59,14 +60,19 @@ def get_session_user(request: Request) -> Optional[str]:
 
 async def apply_chaos_if_enabled(request: Request, user: Optional[str]) -> Optional[Response]:
     """Applies latency injection and session expiry chaos."""
-    if CHAOS_SLOW_PAGES:
-        await asyncio.sleep(CHAOS_DELAY_SECONDS)
+    slow_pages = os.getenv("CHAOS_SLOW_PAGES", "false").lower() in ("true", "1", "yes") or CHAOS_SLOW_PAGES
+    delay_secs = float(os.getenv("CHAOS_DELAY_SECONDS", str(CHAOS_DELAY_SECONDS)))
+    session_expiry = os.getenv("CHAOS_SESSION_EXPIRY", "false").lower() in ("true", "1", "yes") or CHAOS_SESSION_EXPIRY
+    max_reqs = int(os.getenv("CHAOS_SESSION_MAX_REQUESTS", str(CHAOS_SESSION_MAX_REQUESTS)))
 
-    if CHAOS_SESSION_EXPIRY and user:
+    if slow_pages and delay_secs > 0:
+        await asyncio.sleep(delay_secs)
+
+    if session_expiry and user:
         session_id = request.cookies.get("finance_session", "")
         count = SESSION_REQUEST_COUNTS.get(session_id, 0) + 1
         SESSION_REQUEST_COUNTS[session_id] = count
-        if count > CHAOS_SESSION_MAX_REQUESTS:
+        if count > max_reqs:
             resp = RedirectResponse(
                 url="/login?error=Session+expired+due+to+inactivity.+Please+re-authenticate.",
                 status_code=status.HTTP_303_SEE_OTHER
@@ -218,7 +224,9 @@ async def add_payable_post(
     }
 
     # Chaos Injection: Simulated transient 500 error on form submit
-    if CHAOS_500_ON_SUBMIT and (random.random() < CHAOS_ERROR_RATE):
+    chaos_500 = os.getenv("CHAOS_500_ON_SUBMIT", "false").lower() in ("true", "1", "yes") or CHAOS_500_ON_SUBMIT
+    error_rate = float(os.getenv("CHAOS_ERROR_RATE", str(CHAOS_ERROR_RATE)))
+    if chaos_500 and (random.random() < error_rate):
         # We raise a 500 to test the agent's ability to retry or detect transient errors
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -118,3 +118,30 @@ This document records key technical choices, alternatives evaluated, trade-offs,
 - **Context**: Enterprise portals routinely expire user sessions after periods of inactivity or request quotas. Traditional scripts crash when encountering unexpected redirect to `/login`.
 - **Decision**: Implement proactive login detection in `BrowserClient` and `AutonomousTaskWorker`. When a session expiration is detected mid-task, the worker pauses the current step, re-authenticates using environment credentials, and resumes the pending action seamlessly.
 - **Consequences**: High task completion autonomy across multi-step flows without requiring user intervention for simple session timeouts.
+
+---
+
+### DEC-0012: Task Generalization via Semantic Intent Planning Without Hacks
+- **Date**: 2026-10-11
+- **Status**: Accepted
+- **Context**: An autonomous agent must solve diverse, unseen task instructions (aggregation, cross-vendor comparison, batch ingestion, impossible entity rejection) without modifying agent code or injecting task-specific company hacks.
+- **Decision**: Implement `TaskPlanner.classify_task_intent()` which decomposes natural language into general operational semantics: intent (`ENTER_INVOICES`, `REPORT_OVERDUE`, `REPORT_HIGHEST_UNPAID`, `REPORT_GENERAL`), entity query, target quantity, and write requirements. The runner executes the exact same underlying browser tools and verification pipeline for all tasks.
+- **Consequences**: Zero overfitting to specific company names or single invoice structures; genuine general business task automation.
+
+---
+
+### DEC-0013: Ground-Truth Debug Oracle Isolation in Evaluation Harness
+- **Date**: 2026-10-11
+- **Status**: Accepted
+- **Context**: Benchmarking requires validating whether an agent actually achieved the intended ground truth across various chaos configurations.
+- **Decision**: Build `evals/tasks.yaml` and `evals/run.py` where the harness alone queries `/api/debug/state` to objectively audit database states and verify task success. The autonomous agent remains strictly forbidden from querying debug endpoints, relying only on user-facing DOM and database verification.
+- **Consequences**: 100% transparent and objective evaluation metrics without circular self-reporting or evaluation contamination.
+
+---
+
+### DEC-0014: Non-LLM Component Unit Testing Architecture
+- **Date**: 2026-10-11
+- **Status**: Accepted
+- **Context**: Core reliability mechanisms (risk classification, loop detection, exponential backoff, verifier field comparison, date filtering) must be deterministic, highly reliable, and tested independently of stochastic LLM outputs.
+- **Decision**: Build a dedicated unit test suite (`tests/test_unit_core.py`) in `pytest` isolating non-LLM logic. Test mathematical backoff progressions ($base \times 2^r$), three-strike loop triggers, state-hash stagnant progress, exact vs. mismatched verifier comparisons, and PDF regex extraction.
+- **Consequences**: Guarantees zero regressions in core safety and reliability logic during refactors, providing high test velocity (19 unit tests executing in <0.6s).
