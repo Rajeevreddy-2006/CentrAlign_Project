@@ -82,3 +82,8 @@ runs/*
 *.sqlite
 *.sqlite3
 sandbox/data/finance.db
+
+# Folders to ignore
+demo/
+docs/
+scripts/
