@@ -1,0 +1,8 @@
+file 'C:/Users/jraje/OneDrive/Desktop/vscode/CentrAlign_task/demo/scenes/00_intro_title.mp4'
+file 'C:/Users/jraje/OneDrive/Desktop/vscode/CentrAlign_task/demo/scenes/scene_1_main.mp4'
+file 'C:/Users/jraje/OneDrive/Desktop/vscode/CentrAlign_task/demo/scenes/scene_2_resilience.mp4'
+file 'C:/Users/jraje/OneDrive/Desktop/vscode/CentrAlign_task/demo/scenes/scene_3_hitl.mp4'
+file 'C:/Users/jraje/OneDrive/Desktop/vscode/CentrAlign_task/demo/scenes/scene_4_generalization.mp4'
+file 'C:/Users/jraje/OneDrive/Desktop/vscode/CentrAlign_task/demo/scenes/scene_5_verification.mp4'
+file 'C:/Users/jraje/OneDrive/Desktop/vscode/CentrAlign_task/demo/scenes/98_arch_card.mp4'
+file 'C:/Users/jraje/OneDrive/Desktop/vscode/CentrAlign_task/demo/scenes/99_eval_card.mp4'
